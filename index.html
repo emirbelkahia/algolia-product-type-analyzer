@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Algolia Analytics - Analyzer of Hits v1.0</title>
+    <title>Algolia Product Type Analyzer</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Font Awesome for LinkedIn icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -52,7 +52,7 @@
 
     <!-- Tool Introduction Header -->
     <header class="tool-introduction">
-        <h1 class="header-title">Algolia Analytics - Analyzer of Hits v1.0</h1>
+        <h1 class="header-title">Algolia Product Type Analyzer</h1>
         <p class="disclaimer">
             Note: This tool was independently developed by Emir Belkahia, Senior Customer Success Manager at Algolia, in Dec 2023 and updated in Jan 2024. 
             It is not an official Algolia product and is not maintained by Algolia. For questions or improvement suggestions, please contact me on LinkedIn: 
@@ -85,7 +85,7 @@
         <form id="form1">
             <!-- Champs pour l'Application ID -->
             <label for="applicationId">Algolia Application ID:</label>
-            <input type="text" id="applicationId" name="input1" placeholder="ex: 992LFFGOT9">
+            <input type="text" id="applicationId" name="input1" required placeholder="ex: 992LFFGOT9">
     
             <!-- Champs pour la clé API Analytics -->
             <label for="analyticsApiKey">Analytics API Key:</label>
@@ -93,7 +93,7 @@
     
             <!-- Champs pour le Nom d'Index -->
             <label for="indexName">Index Name:</label>
-            <input type="text" id="indexName" name="input3" placeholder="ex: prod_products_fr_fr">
+            <input type="text" id="indexName" name="input3" required placeholder="ex: prod_products_fr_fr">
     
             <!-- Start Date Field (Optional) -->
             <label for="startDate">Start Date (optional):</label>
@@ -155,7 +155,6 @@
             <button type="submit">Run Hits Extraction</button>
         </form>
         <div id="loadingMessage2" class="loader" style="display: none;">Processing, Please wait...</div>
-        <div id="abTestDetails" style="display: none;"></div>
         <div id="output2" style="display: none;">
             <!-- JSON download link or preview will be added here via JavaScript -->
         </div>

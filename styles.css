@@ -133,6 +133,12 @@ div[id^="output"] {
     color: #666;
 }
 
+/* Error messages */
+.error {
+    color: #b00020;
+    font-weight: bold;
+}
+
 /* Table Styles */
 table {
     width: 60%; /* Adjusted width */

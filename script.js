@@ -17,43 +17,9 @@
 */
 
 /**
- * 1) Dès que le DOM est chargé, on injecte le style tooltip, puis on gère le submit du form1.
+ * 1) Dès que le DOM est chargé, on gère le submit du form1.
  */
 document.addEventListener("DOMContentLoaded", () => {
-    // Injecte un style tooltip dans <head>
-    const style = document.createElement('style');
-    style.innerHTML = `
-    .tooltip {
-        position: relative;
-        display: inline-block;
-        cursor: pointer;
-        color: blue;
-        text-decoration: underline;
-    }
-
-    .tooltip .tooltiptext {
-        visibility: hidden;
-        width: 220px;
-        background-color: #fff;
-        border: 1px solid #ccc;
-        color: #000;
-        text-align: center;
-        padding: 5px;
-        border-radius: 6px;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%;
-        left: 50%;
-        margin-left: -110px;
-        box-shadow: 0px 0px 6px #aaa;
-    }
-
-    .tooltip:hover .tooltiptext {
-        visibility: visible;
-    }
-    `;
-    document.head.appendChild(style);
-
     // Form1 : extraction de l'analytics CSV
     document.getElementById('form1').addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -62,6 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const applicationId = document.getElementById('applicationId').value;
         const indexName = document.getElementById('indexName').value;
         const debugMode = document.getElementById('debugModeCheckbox').checked;
+
+        // L'App ID et l'index sont toujours nécessaires (la Section 2 les relit) ;
+        // la clé Analytics ne l'est pas en debug mode (pas d'appel API)
+        if (!applicationId || !indexName || (!debugMode && !analyticsApiKey)) {
+            showError('output1', 'Please fill in the Application ID, Index Name' + (debugMode ? '' : ' and Analytics API Key') + ' before continuing.');
+            return;
+        }
 
         // Sauvegarde dans localStorage pour que Form2 puisse les relire
         localStorage.setItem('algoliaApplicationId', applicationId);
@@ -126,11 +99,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('output1').style.display = 'block';
                 document.getElementById('output1').innerHTML = `
                     <p>Analytics are empty or could not be retrieved. Alternatively, you can download the CSV directly from the Algolia dashboard.</p>
-                    <a href="https://github.com/emirbelkahia/algolia-analytics-analyzer/blob/e20eda990071b8e4d67472f4cf9602cf41da129b/retrieve-analytics-csv-file-from-algolia-dashboard.jpg?raw=true"
+                    <a href="retrieve-analytics-csv-file-from-algolia-dashboard.jpg"
                         target="_blank" class="tooltip">
                         How to download from dashboard
                         <span class="tooltiptext">
-                            <img src="https://github.com/emirbelkahia/algolia-analytics-analyzer/blob/e20eda990071b8e4d67472f4cf9602cf41da129b/retrieve-analytics-csv-file-from-algolia-dashboard.jpg?raw=true"
+                            <img src="retrieve-analytics-csv-file-from-algolia-dashboard.jpg"
                                 alt="Instructions" style="max-width:200px;">
                         </span>
                     </a>
@@ -197,152 +170,154 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById('form2').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    // Montre le message de chargement
-    document.getElementById('loadingMessage2').style.display = 'block';
-    console.log("Loading message should be visible now");
+    const loader = document.getElementById('loadingMessage2');
+
+    // Récup des champs
+    const searchApiKey = document.getElementById('searchApiKey').value;
+    const numSearchesToProcess = Math.min(document.getElementById('numSearchesToProcess').value, 1000);
+    const attributeToRetrieve = document.getElementById('attributeToRetrieve').value;
+    const numResults = document.getElementById('numResults').value;
+    const csvFile = document.getElementById('csvFile').files[0];
+
+    // rulesContexts éventuels
+    const rulesContextValue = document.getElementById('rulesContext').value;
+    let rulesContexts = [];
+    if (rulesContextValue) {
+        rulesContexts = rulesContextValue.split(',').map(item => item.trim());
+        console.log("Captured rulesContexts:", rulesContexts);
+    }
+
+    // On stocke l'attribut dans le localStorage
+    localStorage.setItem('attributeToRetrieve', attributeToRetrieve);
+
+    // On récupère l'appID et l'indexName
+    const applicationId = localStorage.getItem('algoliaApplicationId');
+    const indexName = localStorage.getItem('algoliaIndexName');
+
+    if (!applicationId || !indexName) {
+        showError('output2', 'Algolia Application ID or Index Name is missing. Please fill in Section 1 first (even when you already have your CSV file).');
+        return;
+    }
+
+    if (!csvFile) {
+        showError('output2', 'Please upload the CSV file containing your top searches.');
+        return;
+    }
+
+    loader.textContent = 'Processing, Please wait...';
+    loader.style.display = 'block';
 
     try {
-        console.log("Processing form for Section 2...");
+        const csvData = await csvFile.text();
 
-        // Récup des champs
-        const searchApiKey = document.getElementById('searchApiKey').value;
-        const numSearchesToProcess = Math.min(document.getElementById('numSearchesToProcess').value, 1000);
-        const attributeToRetrieve = document.getElementById('attributeToRetrieve').value;
-        const numResults = document.getElementById('numResults').value;
-        const csvFile = document.getElementById('csvFile').files[0];
-        
-        // rulesContexts éventuels
-        const rulesContextValue = document.getElementById('rulesContext').value;
-        let rulesContexts = [];
-        if (rulesContextValue) {
-            rulesContexts = rulesContextValue.split(',').map(item => item.trim());
-            console.log("Captured rulesContexts:", rulesContexts);
-        } else {
-            console.log("No rulesContext provided.");
-        }
+        // On utilise la fonction parseCSV 3-arguments (targetHeader = "search")
+        const queries = parseCSV(csvData, "search", numSearchesToProcess);
+        console.log("Extracted queries:", queries);
 
-        // On stocke l'attribut dans le localStorage
-        localStorage.setItem('attributeToRetrieve', attributeToRetrieve);
-        console.log("Stored attributeToRetrieve in local storage:", attributeToRetrieve);
-
-        // On récupère l'appID et l'indexName
-        const applicationId = localStorage.getItem('algoliaApplicationId');
-        const indexName = localStorage.getItem('algoliaIndexName');
-        console.log("Retrieved Application ID and Index Name:", applicationId, indexName);
-
-        if (!applicationId || !indexName) {
-            console.error('Algolia Application ID or Index Name is not set');
+        if (queries.length === 0) {
+            showError('output2', 'No queries found in the CSV file. Make sure it contains a "search" column.');
             return;
         }
 
-        if (!csvFile) {
-            console.log("No CSV file uploaded for Section 2");
-            return;
-        }
+        // UserToken
+        let randomToken = Math.random().toString(36).substring(2, 15);
+        let userToken = `analytics-analyzer-${randomToken}`;
 
-        // On lit le CSV avec FileReader
-        let reader = new FileReader();
-        reader.onload = async (e) => {
-            const csvData = e.target.result;
-            console.log("CSV file loaded, starting to parse queries...");
+        let results = [];
+        let failedQueries = [];
 
-            // On utilise la fonction parseCSV 3-arguments (targetHeader = "search")
-            const queries = parseCSV(csvData, "search", numSearchesToProcess);
-            console.log("Extracted queries:", queries);
+        // Boucle sur chaque query
+        for (let i = 0; i < queries.length; i++) {
+            const query = queries[i];
+            loader.textContent = `Processing query ${i + 1}/${queries.length}...`;
 
-            // UserToken
-            let randomToken = Math.random().toString(36).substring(2, 15);
-            let userToken = `analytics-analyzer-${randomToken}`;
-            console.log("UserToken Generated:", userToken);
+            let queryParams = {
+                query: query,
+                hitsPerPage: numResults,
+                attributesToRetrieve: [attributeToRetrieve, 'objectID'],
+                getRankingInfo: true,
+                analytics: false,
+                clickAnalytics: false,
+                userToken: userToken
+            };
 
-            let results = [];
-
-            // Boucle sur chaque query
-            for (let query of queries) {
-                console.log("Processing query:", query);
-
-                let queryParams = {
-                    query: query,
-                    hitsPerPage: numResults,
-                    attributesToRetrieve: [attributeToRetrieve, 'objectID'],
-                    getRankingInfo: true,
-                    analytics: false,
-                    clickAnalytics: false,
-                    userToken: userToken
-                };
-
-                // Ajout du ruleContexts
-                if (rulesContexts.length > 0) {
-                    queryParams['ruleContexts'] = rulesContexts;
-                }
-
-                let response = await fetch(`https://${applicationId}-dsn.algolia.net/1/indexes/${indexName}/query`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Algolia-API-Key': searchApiKey,
-                        'X-Algolia-Application-Id': applicationId,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(queryParams)
-                });
-
-                if (!response.ok) {
-                    console.error('Search API request failed for query:', query);
-                    continue;
-                }
-
-                let data = await response.json();
-
-                // On met l'attribut (ex: inStock) + objectID
-                let queryResults = data.hits.map(hit => ({
-                    [attributeToRetrieve]: getNestedAttribute(hit, attributeToRetrieve),
-                    objectID: hit.objectID
-                }));
-
-                results.push({ query: query, hits: queryResults });
+            // Ajout du ruleContexts
+            if (rulesContexts.length > 0) {
+                queryParams['ruleContexts'] = rulesContexts;
             }
 
-            // On formate en JSON
-            const formattedJson = JSON.stringify(results, null, 2);
-            console.log("Formatted JSON ready for download:", formattedJson);
+            let response = await fetch(`https://${applicationId}-dsn.algolia.net/1/indexes/${indexName}/query`, {
+                method: 'POST',
+                headers: {
+                    'X-Algolia-API-Key': searchApiKey,
+                    'X-Algolia-Application-Id': applicationId,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(queryParams)
+            });
 
-            // Nom de fichier
-            const now = new Date();
-            const dateTimeString = now.toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
-            const filename = `search_results_${dateTimeString}_${applicationId}_${indexName}.json`;
+            if (!response.ok) {
+                console.error('Search API request failed for query:', query);
+                failedQueries.push(query);
+                continue;
+            }
 
-            // Création Blob => download
-            const dataBlob = new Blob([formattedJson], { type: 'application/json' });
-            const downloadUrl = window.URL.createObjectURL(dataBlob);
-            const downloadLink = document.createElement('a');
-            downloadLink.href = downloadUrl;
-            downloadLink.download = filename;
-            downloadLink.textContent = 'Download JSON File';
+            let data = await response.json();
 
-            // Preview (5 premiers items)
-            let previewContent = JSON.stringify(results.slice(0, 5), null, 2);
-            document.getElementById('output2').innerHTML = `
-                <p>Preview of JSON File (first 5 entries):</p>
-                <pre id="jsonPreview">${previewContent}</pre>
-                <p>This is a preview. The full JSON file can be downloaded below.</p>
-            `;
-            document.getElementById('output2').appendChild(downloadLink);
-            document.getElementById('output2').style.display = 'block';
+            // On met l'attribut (ex: inStock) + objectID
+            let queryResults = data.hits.map(hit => ({
+                [attributeToRetrieve]: getNestedAttribute(hit, attributeToRetrieve),
+                objectID: hit.objectID
+            }));
 
-            // Affiche la section 3
-            document.getElementById('section3').style.display = 'block';
-            document.getElementById('section3').scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('loadingMessage2').style.display = 'none';
-        };
+            results.push({ query: query, hits: queryResults });
+        }
 
-        // On lit le fichier CSV
-        reader.readAsText(csvFile);
+        if (results.length === 0) {
+            showError('output2', `All ${queries.length} search requests failed. Check your Search API Key and try again.`);
+            return;
+        }
+
+        // On formate en JSON
+        const formattedJson = JSON.stringify(results, null, 2);
+
+        // Nom de fichier
+        const now = new Date();
+        const dateTimeString = now.toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+        const filename = `search_results_${dateTimeString}_${applicationId}_${indexName}.json`;
+
+        // Création Blob => download
+        const dataBlob = new Blob([formattedJson], { type: 'application/json' });
+        const downloadUrl = window.URL.createObjectURL(dataBlob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = filename;
+        downloadLink.textContent = 'Download JSON File';
+
+        // Avertissement si certaines requêtes ont échoué
+        const failureWarning = failedQueries.length > 0
+            ? `<p class="error">Warning: ${failedQueries.length} of ${queries.length} search requests failed and were skipped (see browser console for details).</p>`
+            : '';
+
+        // Preview (5 premiers items)
+        let previewContent = JSON.stringify(results.slice(0, 5), null, 2);
+        document.getElementById('output2').innerHTML = `
+            ${failureWarning}
+            <p>Preview of JSON File (first 5 entries):</p>
+            <pre id="jsonPreview">${escapeHtml(previewContent)}</pre>
+            <p>This is a preview. The full JSON file can be downloaded below.</p>
+        `;
+        document.getElementById('output2').appendChild(downloadLink);
+        document.getElementById('output2').style.display = 'block';
+
+        // Affiche la section 3
+        document.getElementById('section3').style.display = 'block';
+        document.getElementById('section3').scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
         console.error("An error occurred:", error);
-        // Gérer les erreurs éventuelles
+        showError('output2', `An error occurred during hits extraction: ${error.message}`);
     } finally {
-        // Masquer le loader
-        document.getElementById('loadingMessage2').style.display = 'none';
+        loader.style.display = 'none';
     }
 });
 
@@ -351,24 +326,70 @@ document.getElementById('form2').addEventListener('submit', async (event) => {
  * Extrait la colonne dont le header = targetHeader, et ne dépasse pas maxRows lignes
  */
 function parseCSV(csvData, targetHeader, maxRows) {
-    const lines = csvData.split('\n');
-    const headers = lines[0].split(',');
+    const rows = parseCSVRows(csvData);
+    if (rows.length === 0) return [];
 
-    // Trouver l'index
-    const targetIndex = headers.indexOf(targetHeader);
+    // Header matching insensible à la casse et aux espaces/BOM
+    const headers = rows[0].map(h => h.replace(/^\uFEFF/, '').trim().toLowerCase());
+    const targetIndex = headers.indexOf(targetHeader.toLowerCase());
     if (targetIndex === -1) {
         console.error(`Column "${targetHeader}" not found in the CSV headers.`);
         return [];
     }
 
     const queries = [];
-    for (let i = 1; i < Math.min(lines.length, maxRows + 1); i++) {
-        const cells = lines[i].split(',');
-        if (cells[targetIndex]) {
-            queries.push(cells[targetIndex].trim());
+    for (let i = 1; i < rows.length && queries.length < maxRows; i++) {
+        const cell = rows[i][targetIndex];
+        if (cell && cell.trim()) {
+            queries.push(cell.trim());
         }
     }
     return queries;
+}
+
+/**
+ * Parser CSV minimal : gère les champs entre guillemets (virgules, retours
+ * à la ligne, guillemets doublés "") et les fins de ligne \r\n
+ */
+function parseCSVRows(csvData) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < csvData.length; i++) {
+        const c = csvData[i];
+        if (inQuotes) {
+            if (c === '"') {
+                if (csvData[i + 1] === '"') {
+                    field += '"';
+                    i++;
+                } else {
+                    inQuotes = false;
+                }
+            } else {
+                field += c;
+            }
+        } else if (c === '"') {
+            inQuotes = true;
+        } else if (c === ',') {
+            row.push(field);
+            field = '';
+        } else if (c === '\n' || c === '\r') {
+            if (c === '\r' && csvData[i + 1] === '\n') i++;
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = '';
+        } else {
+            field += c;
+        }
+    }
+    if (field !== '' || row.length > 0) {
+        row.push(field);
+        rows.push(row);
+    }
+    return rows;
 }
 
 /**
@@ -394,33 +415,37 @@ function getNestedAttribute(obj, path) {
 document.getElementById('form3').addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    console.log("Starting processing for Section 3...");
-
     // Fichier JSON + valeur de l'attribut
     const jsonFile = document.getElementById('jsonFile').files[0];
     const attributeValue = document.getElementById('attributeValue').value;
     const attributeToRetrieve = localStorage.getItem('attributeToRetrieve');
 
     if (!jsonFile) {
-        console.log("No JSON file uploaded for Section 3");
+        showError('output3', 'Please upload the JSON file generated in Section 2.');
         return;
     }
 
-    let reader = new FileReader();
-    reader.onload = async (e) => {
-        const jsonData = JSON.parse(e.target.result);
-        console.log("Loaded JSON data from file:", jsonData);
+    if (!attributeToRetrieve) {
+        showError('output3', 'No attribute found. Please run Section 2 first so the tool knows which attribute to analyze.');
+        return;
+    }
 
-        // On calcule le % de hits dont l'attribut = attributeValue
-        console.log(`Calculating percentages for attribute "${attributeToRetrieve}" with value "${attributeValue}"`);
-        const percentages = calculateAttributePercentage(jsonData, attributeToRetrieve, attributeValue);
-
-        if (percentages.length === 0) {
-            console.log("No data to convert to CSV. The result is empty.");
+    try {
+        let jsonData;
+        try {
+            jsonData = JSON.parse(await jsonFile.text());
+        } catch (parseError) {
+            showError('output3', 'The uploaded file is not valid JSON. Please upload the file generated in Section 2.');
             return;
         }
 
-        console.log("Calculated percentages data:", percentages);
+        // On calcule le % de hits dont l'attribut = attributeValue
+        const percentages = calculateAttributePercentage(jsonData, attributeToRetrieve, attributeValue);
+
+        if (percentages.length === 0) {
+            showError('output3', 'The JSON file contains no query results to analyze.');
+            return;
+        }
 
         // Convertir en CSV
         const csvData = convertToCSV(percentages);
@@ -452,9 +477,10 @@ document.getElementById('form3').addEventListener('submit', async (event) => {
         // Scroll vers output3
         document.getElementById('output3').style.display = 'block';
         document.getElementById('output3').scrollIntoView({ behavior: 'smooth' });
-    };
-
-    reader.readAsText(jsonFile);
+    } catch (error) {
+        console.error("An error occurred:", error);
+        showError('output3', `An error occurred during the analysis: ${error.message}`);
+    }
 });
 
 /**
@@ -474,40 +500,37 @@ function convertToCSV(jsonData) {
     // Génération des lignes CSV
     const csvRows = jsonData.map(row => {
         return columns.map(fieldName => {
-            let field = row[fieldName] || '';
-            // Échapper si virgules / newlines
-            if (field.toString().includes(',') || field.toString().includes('\n')) {
-                field = `"${field}"`;
+            // ?? et non || : 0 et false sont des valeurs légitimes
+            let field = String(row[fieldName] ?? '');
+            // Échapper si virgules / guillemets / newlines
+            if (/[",\n\r]/.test(field)) {
+                field = `"${field.replace(/"/g, '""')}"`;
             }
             return field;
         }).join(',');
     });
 
-    const csvString = [csvColumns, ...csvRows].join('\n');
-    console.log("CSV String:", csvString);
-    return csvString;
+    return [csvColumns, ...csvRows].join('\n');
 }
 
 /**
  * Creates an HTML table as a preview of up to 10 rows of CSV data
  */
 function createPreviewTable(csvData) {
-    const rows = csvData.split('\n');
+    const rows = parseCSVRows(csvData);
     let html = '<table><thead><tr>';
 
     // En‐tête
-    const headers = rows[0].split(',');
-    headers.forEach(header => {
-        html += `<th>${header}</th>`;
+    rows[0].forEach(header => {
+        html += `<th>${escapeHtml(header)}</th>`;
     });
     html += '</tr></thead><tbody>';
 
     // Lignes (max 10)
     for (let i = 1; i < Math.min(rows.length, 11); i++) {
         html += '<tr>';
-        const cols = rows[i].split(',');
-        cols.forEach(col => {
-            html += `<td>${col}</td>`;
+        rows[i].forEach(col => {
+            html += `<td>${escapeHtml(col)}</td>`;
         });
         html += '</tr>';
     }
@@ -516,17 +539,34 @@ function createPreviewTable(csvData) {
 }
 
 /**
+ * Échappe les caractères HTML — les queries viennent d'utilisateurs finaux,
+ * elles ne doivent jamais être injectées telles quelles dans le DOM
+ */
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/**
+ * Affiche un message d'erreur dans la zone d'output d'une section
+ */
+function showError(outputId, message) {
+    const output = document.getElementById(outputId);
+    output.style.display = 'block';
+    output.innerHTML = `<p class="error">${escapeHtml(message)}</p>`;
+    output.scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
  * Calculate the percentage of hits that match a specific attribute value
  */
 function calculateAttributePercentage(jsonData, attributeToRetrieve, attributeValue) {
-    console.log("Starting calculation of attribute percentages...");
-    console.log("JSON Data:", jsonData);
-    console.log("Attribute to Retrieve:", attributeToRetrieve, "Attribute Value:", attributeValue);
-
     let percentages = [];
 
     jsonData.forEach(queryObj => {
-        console.log("Processing query:", queryObj.query);
         let count = 0;
 
         queryObj.hits.forEach(hit => {
@@ -536,16 +576,15 @@ function calculateAttributePercentage(jsonData, attributeToRetrieve, attributeVa
             }
         });
 
-        let percentage = (count / queryObj.hits.length) * 100;
-        percentages.push({ 
-            query: queryObj.query, 
+        const totalHits = queryObj.hits.length;
+        // Une query sans hits donne 0%, pas NaN
+        const percentage = totalHits > 0 ? (count / totalHits) * 100 : 0;
+        percentages.push({
+            query: queryObj.query,
             [`percentage of ${attributeToRetrieve} (${attributeValue})`]: percentage.toFixed(2),
-            totalHits: queryObj.hits.length
+            totalHits: totalHits
         });
-
-        console.log(`Processed results for query "${queryObj.query}": Percentage - ${percentage.toFixed(2)}%, Total Hits - ${queryObj.hits.length}`);
     });
 
-    console.log("Final Percentages:", percentages);
     return percentages;
 }
