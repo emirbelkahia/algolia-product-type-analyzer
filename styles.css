@@ -90,16 +90,47 @@ form {
     gap: 15px;
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="password"]:focus {
     border-color: #7dade2;
     outline: none;
+}
+
+/* API key fields with show/hide toggle */
+.key-field {
+    position: relative;
+    display: flex;
+}
+
+.key-field input {
+    flex: 1;
+    padding-right: 44px;
+}
+
+.toggle-key {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #888;
+    padding: 6px 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.toggle-key:hover {
+    background: none;
+    color: #333;
 }
 
 /* Button Styles */

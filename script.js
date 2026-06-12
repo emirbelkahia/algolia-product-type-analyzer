@@ -20,6 +20,16 @@
  * 1) Dès que le DOM est chargé, on gère le submit du form1.
  */
 document.addEventListener("DOMContentLoaded", () => {
+    // Boutons œil des champs API key
+    document.querySelectorAll('.toggle-key').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = btn.parentElement.querySelector('input');
+            const reveal = input.type === 'password';
+            input.type = reveal ? 'text' : 'password';
+            btn.querySelector('i').className = reveal ? 'fas fa-eye-slash' : 'fas fa-eye';
+        });
+    });
+
     // Form1 : extraction de l'analytics CSV
     document.getElementById('form1').addEventListener('submit', async (event) => {
         event.preventDefault();

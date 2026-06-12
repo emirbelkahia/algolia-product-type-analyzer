@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Algolia Product Type Analyzer</title>
+    <title>Algolia Product Type Analyzer v1.1</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <!-- Font Awesome for LinkedIn icon -->
@@ -53,10 +53,10 @@
 
     <!-- Tool Introduction Header -->
     <header class="tool-introduction">
-        <h1 class="header-title">Algolia Product Type Analyzer</h1>
+        <h1 class="header-title">Algolia Product Type Analyzer v1.1</h1>
         <p class="disclaimer">
-            Note: This tool was independently developed by Emir Belkahia, Senior Customer Success Manager at Algolia, in Dec 2023 and updated in Jan 2024. 
-            It is not an official Algolia product and is not maintained by Algolia. For questions or improvement suggestions, please contact me on LinkedIn: 
+            Note: This tool was independently developed by Emir Belkahia, Senior Customer Success Manager at Algolia, in Dec 2023 and refreshed in June 2026 (v1.1).
+            It is not an official Algolia product and is not maintained by Algolia. For questions or improvement suggestions, please contact me on LinkedIn:
             <a href="https://www.linkedin.com/in/emirbelkahia/" target="_blank">
                 <i class="fab fa-linkedin"></i> my LinkedIn profile</a>.
         </p>
@@ -90,7 +90,10 @@
     
             <!-- Champs pour la clé API Analytics -->
             <label for="analyticsApiKey">Analytics API Key:</label>
-            <input type="text" id="analyticsApiKey" name="input2" placeholder="ex: 9g985748fd51a6388ed321d9319fu8c5">
+            <div class="key-field">
+                <input type="password" id="analyticsApiKey" name="input2" placeholder="ex: 9g985748fd51a6388ed321d9319fu8c5">
+                <button type="button" class="toggle-key" aria-label="Show or hide the API key"><i class="fas fa-eye"></i></button>
+            </div>
     
             <!-- Champs pour le Nom d'Index -->
             <label for="indexName">Index Name:</label>
@@ -136,7 +139,10 @@
         <p class="section-description">We'll now pass to the engine the amount of searches you indicated above.</p>
         <form id="form2">
             <label for="searchApiKey">Search API Key:</label>
-            <input type="text" id="searchApiKey" name="searchApiKey" required placeholder="ex: afffbece388744ddabcc328a11bdafff">
+            <div class="key-field">
+                <input type="password" id="searchApiKey" name="searchApiKey" required placeholder="ex: afffbece388744ddabcc328a11bdafff">
+                <button type="button" class="toggle-key" aria-label="Show or hide the API key"><i class="fas fa-eye"></i></button>
+            </div>
 
             <label for="csvFile">Upload CSV File:</label>
             <input type="file" id="csvFile" name="csvFile" accept=".csv" required>
