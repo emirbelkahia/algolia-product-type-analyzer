@@ -226,51 +226,57 @@ document.getElementById('form2').addEventListener('submit', async (event) => {
         let results = [];
         let failedQueries = [];
 
-        // Boucle sur chaque query
-        for (let i = 0; i < queries.length; i++) {
-            const query = queries[i];
-            loader.textContent = `Processing query ${i + 1}/${queries.length}...`;
+        // Paramètres communs à toutes les queries (format query-string de l'endpoint multi-queries)
+        const baseParams = {
+            hitsPerPage: numResults,
+            attributesToRetrieve: JSON.stringify([attributeToRetrieve, 'objectID']),
+            attributesToHighlight: '[]',
+            analytics: 'false',
+            clickAnalytics: 'false',
+            userToken: userToken
+        };
+        if (rulesContexts.length > 0) {
+            baseParams.ruleContexts = JSON.stringify(rulesContexts);
+        }
 
-            let queryParams = {
-                query: query,
-                hitsPerPage: numResults,
-                attributesToRetrieve: [attributeToRetrieve, 'objectID'],
-                getRankingInfo: true,
-                analytics: false,
-                clickAnalytics: false,
-                userToken: userToken
-            };
+        // L'endpoint multi-queries accepte jusqu'à 50 requêtes par appel
+        const BATCH_SIZE = 50;
 
-            // Ajout du ruleContexts
-            if (rulesContexts.length > 0) {
-                queryParams['ruleContexts'] = rulesContexts;
-            }
+        for (let start = 0; start < queries.length; start += BATCH_SIZE) {
+            const batch = queries.slice(start, start + BATCH_SIZE);
+            loader.textContent = `Processing queries ${start + 1}-${start + batch.length} / ${queries.length}...`;
 
-            let response = await fetch(`https://${applicationId}-dsn.algolia.net/1/indexes/${indexName}/query`, {
+            const requests = batch.map(query => ({
+                indexName: indexName,
+                params: new URLSearchParams({ ...baseParams, query: query }).toString()
+            }));
+
+            const response = await fetch(`https://${applicationId}-dsn.algolia.net/1/indexes/*/queries`, {
                 method: 'POST',
                 headers: {
                     'X-Algolia-API-Key': searchApiKey,
                     'X-Algolia-Application-Id': applicationId,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(queryParams)
+                body: JSON.stringify({ requests: requests })
             });
 
             if (!response.ok) {
-                console.error('Search API request failed for query:', query);
-                failedQueries.push(query);
+                console.error('Search API request failed for batch starting at query:', batch[0]);
+                failedQueries.push(...batch);
                 continue;
             }
 
-            let data = await response.json();
+            const data = await response.json();
 
-            // On met l'attribut (ex: inStock) + objectID
-            let queryResults = data.hits.map(hit => ({
-                [attributeToRetrieve]: getNestedAttribute(hit, attributeToRetrieve),
-                objectID: hit.objectID
-            }));
-
-            results.push({ query: query, hits: queryResults });
+            // Les résultats reviennent dans le même ordre que les requêtes envoyées
+            data.results.forEach((result, i) => {
+                const queryResults = (result.hits || []).map(hit => ({
+                    [attributeToRetrieve]: getNestedAttribute(hit, attributeToRetrieve),
+                    objectID: hit.objectID
+                }));
+                results.push({ query: batch[i], hits: queryResults });
+            });
         }
 
         if (results.length === 0) {
