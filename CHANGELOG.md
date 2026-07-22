@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2 — 2026-07-22
+
+- CSV downloads (Sections 1 and 3) now start with a UTF-8 BOM so Excel detects the encoding — fixes broken Thai/Korean/non-Latin characters when opening the downloaded file (reported by Lyreco Thailand)
+
 ## v1.1 — 2026-06-12
 
 - Section 2 queries batched through the Algolia multi-queries endpoint (50 per call): 1000 queries now take seconds instead of minutes

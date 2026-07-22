@@ -138,8 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const dateTimeString = now.toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
             const filename = `top_searches_${dateTimeString}_${applicationId}_${indexName}.csv`;
 
-            // Prépare un Blob pour le download CSV
-            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+            // Prépare un Blob pour le download CSV — BOM UTF-8 requis pour
+            // qu'Excel détecte l'encodage (sinon caractères thaï/coréens cassés)
+            const blob = new Blob(['\uFEFF', csvData], { type: 'text/csv;charset=utf-8;' });
             const downloadUrl = window.URL.createObjectURL(blob);
             const downloadLink = document.createElement('a');
             downloadLink.href = downloadUrl;
@@ -481,8 +482,8 @@ document.getElementById('form3').addEventListener('submit', async (event) => {
         const indexName = localStorage.getItem('algoliaIndexName');
         const filename = `attribute_analysis_${dateTimeString}_${applicationId}_${indexName}.csv`;
 
-        // Blob => Download
-        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        // Blob => Download — BOM UTF-8 requis pour qu'Excel détecte l'encodage
+        const blob = new Blob(['\uFEFF', csvData], { type: 'text/csv;charset=utf-8;' });
         const downloadUrl = window.URL.createObjectURL(blob);
         const downloadLink = document.createElement('a');
         downloadLink.href = downloadUrl;
